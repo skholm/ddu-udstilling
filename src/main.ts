@@ -36,7 +36,22 @@ scene.add(cube);
 //set up animation loop
 
 //animation loop
-function update() {}
+function update() {
+	if (loadedSkybox === null) {
+		//initialize skybox, if development environment, prompt for skybox name, otherwise load default skybox
+		if (
+			window.location.hostname === "localhost" ||
+			window.location.hostname === "127.0.0.1" ||
+			window.location.hostname === "node"
+		) {
+			const skyboxName =
+				prompt("Enter skybox name (default = test):", "test") || "test";
+			loadSkybox(skyboxName);
+		} else {
+			loadSkybox("test");
+		}
+	}
+}
 
 function render() {
 	renderer.render(scene, camera);
@@ -46,3 +61,22 @@ function gameLoop() {
 	render();
 }
 renderer.setAnimationLoop(gameLoop); //used instead of requestAnimationFrame for WebXR compatibility
+let loadedSkybox: string | null = null;
+function loadSkybox(skyboxName: string) {
+	let loader = new THREE.CubeTextureLoader();
+	switch (skyboxName) {
+		case "test":
+			loader.setPath("public/skyboxes/" + skyboxName + "/");
+			loadedSkybox = skyboxName;
+			break;
+		default:
+			throw new Error("Skybox not found");
+	}
+	loader.load(
+		["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"],
+		function (texture) {
+			scene.background = texture;
+			console.log("Skybox loaded: " + skyboxName);
+		},
+	);
+}
