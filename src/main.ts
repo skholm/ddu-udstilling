@@ -66,6 +66,7 @@ function loadSkybox(skyboxName: string) {
 	let loader = new THREE.CubeTextureLoader();
 	switch (skyboxName) {
 		case "test":
+		case "test2":
 			loader.setPath("public/skyboxes/" + skyboxName + "/");
 			loadedSkybox = skyboxName;
 			break;
