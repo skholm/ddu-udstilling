@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { VRButton } from "three/addons/webxr/VRButton.js";
 import { XRControllerModelFactory } from "three/addons/webxr/XRControllerModelFactory.js";
+import { FontLoader } from "three/addons/loaders/FontLoader.js";
+import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 
 //set up scene, camera, and renderer
 const scene = new THREE.Scene();
@@ -38,9 +40,6 @@ scene.add(cube);
 
 
 //add controllers
-
-
-// 1. Load your custom texture
 const textureLoader = new THREE.TextureLoader();
 const customTexture = textureLoader.load('public/textures/nextControllerBoth_color1k.png');
 // glTF models expect flipY to be false
@@ -53,6 +52,9 @@ const controllerModelFactory = new XRControllerModelFactory();
 
 for (let index = 0; index < 2; index += 1) {
 	const controller = renderer.xr.getController(index);
+	controller.addEventListener("connected", (event) => {
+		controller.userData.inputSource = (event as THREE.Event & { data: XRInputSource }).data;
+	});
 	scene.add(controller);
 
 	const controllerGrip = renderer.xr.getControllerGrip(index);
@@ -79,6 +81,55 @@ controllerModel
 }
 
 
+
+var buttonList: { buttonInteraction: THREE.Mesh; button: THREE.Mesh; buttonBase: THREE.Mesh; pressed: boolean }[] = [];
+function newButton(position: THREE.Vector3) {
+
+
+const buttonGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 32);
+const buttonMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
+button.position.set(position.x, position.y, position.z);
+scene.add(button);
+
+const buttonInteractionGeometry = buttonGeometry.clone();
+const buttonInteractionMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, opacity: 0.1 });
+const buttonInteraction = new THREE.Mesh(buttonInteractionGeometry, buttonInteractionMaterial);
+buttonInteraction.position.set(position.x, position.y, position.z);
+scene.add(buttonInteraction);
+
+
+
+const buttonBaseGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.1, 32);
+const buttonBaseMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+const buttonBase = new THREE.Mesh(buttonBaseGeometry, buttonBaseMaterial);
+buttonBase.position.set(position.x, position.y - 0.1, position.z);
+scene.add(buttonBase);
+
+
+buttonList.push({buttonInteraction, button, buttonBase, pressed: false});
+//add text to button
+const loader = new FontLoader();
+loader.load('public/fonts/Roboto_Regular.typeface.json', function (font) {
+	const textGeometry = new TextGeometry('Press', {
+		font: font,
+		size: 10.1,
+		depth: 0.2,
+	});
+	const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+	const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+	textMesh.position.set(position.x - 0.15, position.y - 0.05, position.z + 0.05);
+	scene.add(textMesh);
+});
+
+
+return button;
+
+}
+newButton(new THREE.Vector3(0.5, 1, 0));
+
+
+
 //set up animation loop
 
 //animation loop
@@ -97,6 +148,48 @@ function update() {
 			loadSkybox("test");
 		}
 	}
+
+	//if controller is connected
+	if (renderer.xr.isPresenting) {
+		for (let index = 0; index < 2; index += 1) {
+			const controller = renderer.xr.getController(index);
+			if (controller) {
+				const controllerPosition = new THREE.Vector3();
+				controller.getWorldPosition(controllerPosition);
+
+				//check if controller is touching any buttons
+				for (const buttonMeshes of buttonList) {
+					const buttonPosition = new THREE.Vector3();
+
+					const button = buttonMeshes.buttonInteraction;
+					const cosmeticButton = buttonMeshes.button;
+
+					button.getWorldPosition(buttonPosition);
+					const distance = controllerPosition.distanceTo(buttonPosition);
+
+					if (distance < 0.3) {
+						//is touching button
+
+						const inputSource = controller.userData.inputSource as XRInputSource | undefined;
+						const trigger = inputSource?.gamepad?.buttons[0];
+						if (trigger?.pressed != buttonMeshes.pressed) {
+						if (trigger?.pressed === true) {
+							//move cosmetic button down
+							cosmeticButton.position.set(buttonPosition.x, buttonPosition.y - 0.05, buttonPosition.z);
+						buttonMeshes.pressed = true
+						} else {
+							//move cosmetic button up
+							cosmeticButton.position.set(buttonPosition.x, buttonPosition.y, buttonPosition.z);
+						buttonMeshes.pressed = false
+						}}
+						
+
+					}
+				}
+			}
+		}
+	}
+
 }
 
 function render() {
