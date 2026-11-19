@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { VRButton } from "three/addons/webxr/VRButton.js";
+import { XRControllerModelFactory } from "three/addons/webxr/XRControllerModelFactory.js";
 
 //set up scene, camera, and renderer
 const scene = new THREE.Scene();
@@ -32,6 +33,51 @@ const geometry = new THREE.BoxGeometry(1, 1, 1);
 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const cube = new THREE.Mesh(geometry, material);
 scene.add(cube);
+
+
+
+
+//add controllers
+
+
+// 1. Load your custom texture
+const textureLoader = new THREE.TextureLoader();
+const customTexture = textureLoader.load('public/textures/nextControllerBoth_color1k.png');
+// glTF models expect flipY to be false
+customTexture.flipY = false;
+customTexture.colorSpace = THREE.SRGBColorSpace;
+
+
+
+const controllerModelFactory = new XRControllerModelFactory();
+
+for (let index = 0; index < 2; index += 1) {
+	const controller = renderer.xr.getController(index);
+	scene.add(controller);
+
+	const controllerGrip = renderer.xr.getControllerGrip(index);
+	let controllerModel = controllerModelFactory.createControllerModel(controllerGrip);
+	/*
+	// Apply the custom texture to the controller model's material
+	if (controllerModel && controllerModel.children.length > 0) {
+		controllerModel.traverse((child) => {
+			if ((child as THREE.Mesh).isMesh) {
+				const mesh = child as THREE.Mesh;
+				if (mesh.material instanceof THREE.Material) {
+					(mesh.material as THREE.MeshStandardMaterial).map = customTexture;
+					(mesh.material as THREE.MeshStandardMaterial).needsUpdate = true;
+
+				}
+			}
+		}
+	);}*/
+
+	controllerGrip.add(
+controllerModel
+	);
+	scene.add(controllerGrip);
+}
+
 
 //set up animation loop
 
